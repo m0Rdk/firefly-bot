@@ -9,6 +9,8 @@ import logging
 import os
 from pathlib import Path
 
+import re
+
 from firefly import Firefly
 from telegram import (InlineKeyboardButton, InlineKeyboardMarkup,
                       ReplyKeyboardRemove)
@@ -62,15 +64,19 @@ def store_default_account(update, context):
 
 def spend(update, context):
     message = update.message.text.split(' ')
+    text = update.message.text
 
     if len(message) < 2:
         update.message.reply_text("Just type in an expense with a description. Like this - '5 Starbucks`")
         return
 
-    amount = message[0]
-    description = message[1]
-    category = message[2] if 2 < len(message) else None # Safely try to check for index
-    budget = message[3] if 3 < len(message) else None # Safely try to check for index
+    matches = re.findall("^(\d+\.?\d+)|(([\"'])(?:(?=(\\\\?))\\4.)*?\\3|\w+)", text)
+    amount = matches[0][0]
+
+    matches = [re.sub("^[\"']|[\"']$", '', match[1]) for match in matches]
+    description = matches[1]
+    category = matches[2] if 2 < len(matches) else None # Safely try to check for index
+    budget = matches[3] if 3 < len(matches) else None # Safely try to check for index
     
     firefly = get_firefly(context)
     account = context.user_data["firefly_default_account"]
